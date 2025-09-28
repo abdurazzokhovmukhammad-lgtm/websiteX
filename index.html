@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TradeCalc</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    body {
+      font-family: "Inter", sans-serif;
+      background: #f3f4f6;
+      margin: 0;
+      padding: 0;
+      display: flex;
+      justify-content: center;
+      align-items: flex-start;
+      min-height: 100vh;
+    }
+    .container {
+      background: #fff;
+      margin-top: 40px;
+      padding: 30px;
+      border-radius: 12px;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+      width: 95%;
+      max-width: 700px;
+    }
+    h1 {
+      text-align: center;
+      font-size: 24px;
+      margin-bottom: 20px;
+    }
+    .row {
+      display: flex;
+      justify-content: space-between;
+      gap: 10px;
+      margin-bottom: 15px;
+    }
+    .row label {
+      flex: 1;
+      font-size: 14px;
+    }
+    .row input, .row select {
+      flex: 2;
+      padding: 8px;
+      border-radius: 6px;
+      border: 1px solid #ccc;
+      font-size: 14px;
+    }
+    button {
+      width: 100%;
+      padding: 12px;
+      background: #2563eb;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      font-size: 16px;
+      cursor: pointer;
+      margin-top: 10px;
+    }
+    button:hover {
+      background: #1d4ed8;
+    }
+    .result {
+      margin-top: 20px;
+      padding: 15px;
+      background: #f9fafb;
+      border-radius: 10px;
+      text-align: center;
+    }
+    .note {
+      margin-top: 10px;
+      font-size: 12px;
+      color: #6b7280;
+      text-align: center;
+    }
+    .lang-currency {
+      display: flex;
+      justify-content: space-between;
+      gap: 10px;
+      margin-bottom: 20px;
+    }
+    #chart-container {
+      margin-top: 25px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1 id="title">TradeCalc</h1>
+
+    <div class="lang-currency">
+      <select id="language">
+        <option value="ru">Русский</option>
+        <option value="en">English</option>
+        <option value="uz">Oʻzbekcha</option>
+      </select>
+      <select id="currency">
+        <option value="USD">$ USD</option>
+        <option value="EUR">€ EUR</option>
+        <option value="RUB">₽ RUB</option>
+        <option value="UZS">soʻm UZS</option>
+      </select>
+    </div>
+
+    <div class="row">
+      <label id="depositLabel">Начальный депозит:</label>
+      <input type="number" id="deposit" value="1000">
+    </div>
+    <div class="row">
+      <label id="winrateLabel">WinRate (%):</label>
+      <input type="number" id="winrate" value="55">
+    </div>
+    <div class="row">
+      <label id="rrLabel">Risk/Reward Ratio:</label>
+      <input type="number" id="riskReward" value="2">
+    </div>
+    <div class="row">
+      <label id="profitLabel">Прибыль за сделку (%):</label>
+      <input type="number" id="profit" value="2">
+    </div>
+    <div class="row">
+      <label id="lossLabel">Убыток за сделку (%):</label>
+      <input type="number" id="loss" value="1">
+    </div>
+    <div class="row">
+      <label id="freqLabel">Частота сделок:</label>
+      <select id="frequency">
+        <option value="daily">Каждый день</option>
+        <option value="weekly">Каждую неделю</option>
+        <option value="monthly">Каждый месяц</option>
+      </select>
+    </div>
+    <div class="row">
+      <label id="durationLabel">Длительность (месяцы):</label>
+      <input type="number" id="duration" value="12">
+    </div>
+    <div class="row">
+      <label id="contribLabel">Доп. вклад (в мес):</label>
+      <input type="number" id="contribution" value="0">
+    </div>
+
+    <button id="calcBtn">Рассчитать</button>
+
+    <div class="result" id="result"></div>
+    <div class="note" id="note">
+      ⚠️ Результаты показывают только торговые дни (выходные исключены).
+    </div>
+
+    <div id="chart-container">
+      <canvas id="growthChart"></canvas>
+    </div>
+  </div>
+
+  <script>
+    const translations = {
+      ru: {
+        deposit: "Начальный депозит:",
+        winrate: "WinRate (%):",
+        rr: "Risk/Reward Ratio:",
+        profit: "Прибыль за сделку (%):",
+        loss: "Убыток за сделку (%):",
+        freq: "Частота сделок:",
+        duration: "Длительность (месяцы):",
+        contrib: "Доп. вклад (в мес):",
+        calc: "Рассчитать",
+        result: "Финальный депозит:",
+        note: "⚠️ Результаты показывают только торговые дни (выходные исключены)."
+      },
+      en: {
+        deposit: "Initial deposit:",
+        winrate: "WinRate (%):",
+        rr: "Risk/Reward Ratio:",
+        profit: "Profit per trade (%):",
+        loss: "Loss per trade (%):",
+        freq: "Trade frequency:",
+        duration: "Duration (months):",
+        contrib: "Monthly contribution:",
+        calc: "Calculate",
+        result: "Final deposit:",
+        note: "⚠️ Results show only trading days (weekends excluded)."
+      },
+      uz: {
+        deposit: "Boshlangʻich depozit:",
+        winrate: "WinRate (%):",
+        rr: "Risk/Reward Nisbati:",
+        profit: "Bitim foydasi (%):",
+        loss: "Bitim zarari (%):",
+        freq: "Savdo chastotasi:",
+        duration: "Davomiylik (oy):",
+        contrib: "Oylik qoʻshimcha depozit:",
+        calc: "Hisoblash",
+        result: "Yakuniy depozit:",
+        note: "⚠️ Natijalar faqat savdo kunlarini koʻrsatadi (dam olish kunlari hisoblanmaydi)."
+      }
+    };
+
+    const currencySymbols = {
+      USD: "$",
+      EUR: "€",
+      RUB: "₽",
+      UZS: "soʻm"
+    };
+
+    const langSelect = document.getElementById("language");
+    const currencySelect = document.getElementById("currency");
+    let chartInstance;
+
+    function updateLanguage() {
+      const lang = langSelect.value;
+      document.getElementById("depositLabel").innerText = translations[lang].deposit;
+      document.getElementById("winrateLabel").innerText = translations[lang].winrate;
+      document.getElementById("rrLabel").innerText = translations[lang].rr;
+      document.getElementById("profitLabel").innerText = translations[lang].profit;
+      document.getElementById("lossLabel").innerText = translations[lang].loss;
+      document.getElementById("freqLabel").innerText = translations[lang].freq;
+      document.getElementById("durationLabel").innerText = translations[lang].duration;
+      document.getElementById("contribLabel").innerText = translations[lang].contrib;
+      document.getElementById("calcBtn").innerText = translations[lang].calc;
+      document.getElementById("note").innerText = translations[lang].note;
+    }
+
+    langSelect.addEventListener("change", updateLanguage);
+
+    document.getElementById("calcBtn").addEventListener("click", () => {
+      let deposit = parseFloat(document.getElementById("deposit").value);
+      const winrate = parseFloat(document.getElementById("winrate").value) / 100;
+      const profitPct = parseFloat(document.getElementById("profit").value) / 100;
+      const lossPct = parseFloat(document.getElementById("loss").value) / 100;
+      const freq = document.getElementById("frequency").value;
+      const months = parseInt(document.getElementById("duration").value);
+      const contribution = parseFloat(document.getElementById("contribution").value);
+      const currency = currencySelect.value;
+
+      let tradesPerMonth = freq === "daily" ? 21 : freq === "weekly" ? 4 : 1;
+      let totalTrades = tradesPerMonth * months;
+
+      let depositsOverTime = [];
+      let currentDeposit = deposit;
+
+      for (let month = 1; month <= months; month++) {
+        for (let i = 0; i < tradesPerMonth; i++) {
+          if (Math.random() < winrate) {
+            currentDeposit *= (1 + profitPct);
+          } else {
+            currentDeposit *= (1 - lossPct);
+          }
+        }
+        currentDeposit += contribution;
+        depositsOverTime.push(currentDeposit);
+      }
+
+      const lang = langSelect.value;
+      document.getElementById("result").innerText =
+        `${translations[lang].result} ${currentDeposit.toFixed(2)} ${currencySymbols[currency]}`;
+
+      // обновляем график
+      const ctx = document.getElementById("growthChart").getContext("2d");
+      if (chartInstance) {
+        chartInstance.destroy();
+      }
+      chartInstance = new Chart(ctx, {
+        type: "line",
+        data: {
+          labels: Array.from({length: months}, (_, i) => `${i+1}`),
+          datasets: [{
+            label: translations[lang].result,
+            data: depositsOverTime.map(v => v.toFixed(2)),
+            borderColor: "#2563eb",
+            backgroundColor: "rgba(37, 99, 235, 0.2)",
+            fill: true,
+            tension: 0.2
+          }]
+        },
+        options: {
+          responsive: true,
+          plugins: {
+            legend: { display: false }
+          },
+          scales: {
+            x: { title: { display: true, text: "Месяцы" } },
+            y: { title: { display: true, text: `Депозит (${currencySymbols[currency]})` } }
+          }
+        }
+      });
+    });
+
+    updateLanguage();
+  </script>
+</body>
+</html>
